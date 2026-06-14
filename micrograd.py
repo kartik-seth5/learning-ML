@@ -1,6 +1,5 @@
 import math 
 import numpy as np 
-import matplotlib as mpl
 
 
 """ 
@@ -26,9 +25,17 @@ class Node:
         self.backward = lambda: None #this will be where the backprop function is stored
         self.operation = ''
 
+    def __repr__(self):
+        return f"{self.data}"
+
+
     def __add__(self, other):
         #on the add operation it creates a new nodes where the value of the node is the sum
-       
+
+        #wrapper for non node types:
+        other = other if isinstance(other, Node) else Node(other)       
+
+
         out = Node(self.data + other.data, (self, other))
         out.operation = '+'
 
@@ -42,8 +49,18 @@ class Node:
         
         return out
     
+    def __sub__(self, other):
+        return self.__add__(self, other * -1)
+    
+    def __rmul__(self, other):
+        return self.__mul__(other)  #is self * other because once a * b is evaluated to not exist python will attempt to run b * a and that is when this function is called
+    
     def __mul__(self, other):
         #multiply operaton also creates a new node 
+
+        #wrapper for non node types:
+        other = other if isinstance(other, Node) else Node(other)       
+
 
         out = Node(self.data * other.data, (self, other))
         out.operation = '*'
@@ -55,34 +72,56 @@ class Node:
         out.backward = mulBackProp
         
         return out
-    
+
+    def __truediv__(self, other):
+        return self * other**-1
+
+    def __pow__(self, other):
+        
+        assert isinstance(other, (float, int)), "Must be a real number"
+        out = Node(self.data**other, (self,))
+
+        out.operation = f'^{other}'
+
+        def powerBackProp():
+            self.grad += (other * self.data**(other - 1)) * out.grad
+        
+        out.backward = powerBackProp
+
+        return out
+
+
     def tanh(self):
     
         x = self.data
-        _tanh = (np.exp(2 * x) - 1)/(np.exp(2*x) + 1, (self))
+        _tanh = (np.exp(2 * x) - 1)/(np.exp(2*x) + 1)
+
+        out = Node(_tanh, (self,))
 
         def tanBackProp():
             self.grad += (1 - _tanh**2) * out.grad
             
-        out = Node(_tanh, (self))
+
         out.operation = 'tanh'
         out.backward = tanBackProp
         return out 
     
+    def exp(self):
+        x = self.data
+        eX = np.exp(self.data)
+        out = Node(eX, (self, ))
 
-a = Node()
-b = Node()
-c = Node()
-d = Node(3.0)
-e = Node(0.4)
-f = Node(1.2)
-g = Node(2.4)
+        def expBackProp():
+            self.grad += self.data * eX
+        
+        out.backward = expBackProp
+        out.operation = 'exp'
+
+        return out
 
 
-a = d*e + f*g
-b = d * e * f
-c.data = 5.0
+a = Node(1.0)
 
-y = a * b * c
+a =  a * 2.0
 
-print(y.data)
+print(a)
